@@ -1,6 +1,7 @@
 const User = require("../models/User.model.js");
 const bcrypt = require("bcryptjs");
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require("../utils/jwt.js");
+const { sanitizeUser } = require("../utils/sanitizeUser.js");
 
 const registerUserService = async (fullName, email, password) => {
     const existingUser = await User.findOne({ email });
@@ -12,11 +13,9 @@ const registerUserService = async (fullName, email, password) => {
 
     const user = await User.create({ fullName, email, password: hashedPassword });
 
-    const userData = user.toObject();
-    delete userData.password;
-    delete userData.refreshToken;
+    const userData=sanitizeUser(user);
 
-    return user;
+    return userData;
 };
 
 const loginUserService = async (email, password) => {
@@ -36,26 +35,32 @@ const loginUserService = async (email, password) => {
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();
 
-    await user.save();
+    await user.save({ validateBeforeSave: false });
+
+    const userData=sanitizeUser(user);
 
     return {
-        user, accessToken, refreshToken
+        userData, accessToken, refreshToken
     };
 };
 
-const logoutUserService=async(refreshToken)=>{
-    try{
-        const decoded=verifyRefreshToken(refreshToken);
+const logoutUserService = async (refreshToken) => {
+    if (!refreshToken) {
+        return;
+    }
 
-        const user=await User.findById(decoded.userId);
-        if(!userId){
+    try {
+        const decoded = verifyRefreshToken(refreshToken);
+
+        const user = await User.findById(decoded.userId);
+        if (!user) {
             return;
         }
 
-        user.refreshToken=null;
+        user.refreshToken = null;
         await user.save();
     }
-    catch(error){
+    catch (error) {
         return;
     }
 }

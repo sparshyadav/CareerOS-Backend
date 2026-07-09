@@ -11,12 +11,12 @@ const registerUserController = async (req, res) => {
             });
         }
 
-        const data = await registerUserService(fullName, email, password);
+        const user = await registerUserService(fullName, email, password);
 
         return res.status(201).json({
             success: true,
             message: "User registered successfully",
-            data
+            data: user
         });
     }
     catch (error) {
@@ -37,14 +37,10 @@ const loginUserController = async (req, res) => {
             });
         };
 
-        const { user, accessToken, refreshToken } = await loginUserService(email, password);
+        const { userData, accessToken, refreshToken } = await loginUserService(email, password);
 
         res.cookie("accessToken", accessToken, accessTokenCookieOptions);
         res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
-
-        const userData = user.toObject();
-        delete userData.password;
-        delete userData.refreshToken;
 
         return res.status(200).json({
             success: true,
@@ -65,7 +61,7 @@ const logoutUserController = async (req, res) => {
         const refreshToken = req.cookies.refreshToken;
 
         if (!refreshToken) {
-            return rs.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: "Already logged out"
             });
@@ -82,7 +78,7 @@ const logoutUserController = async (req, res) => {
         });
     }
     catch (error) {
-        return res.status(400).json({
+        return res.status(500).json({
             success: false,
             message: error.message
         })
